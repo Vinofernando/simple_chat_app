@@ -1,5 +1,9 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import * as connectionService from "./connection_service.js";
+import type {
+  FriendListQuery,
+  FriendRequestStatus,
+} from "../types/connection.js";
 
 export const addFriendControl = async (
   req: FastifyRequest,
@@ -42,7 +46,10 @@ export const handleRequestController = async (
         .send({ message: "User harus login untuk menggunakan fitur ini" });
     }
 
-    const { toId, status } = req.body as { toId: number; status: string };
+    const { toId, status } = req.body as {
+      toId: number;
+      status: FriendRequestStatus;
+    };
 
     console.log(toId, status);
     const result = await connectionService.handleFriendRequest(
@@ -53,6 +60,31 @@ export const handleRequestController = async (
 
     console.log(result);
     res.status(201).send(result);
+  } catch (err) {
+    if (err instanceof Error) {
+      return res.status(500).send({ error: err.message });
+    }
+    res.status(500).send({ error: "Unknown error" });
+  }
+};
+
+export const friendListControl = async (
+  req: FastifyRequest,
+  res: FastifyReply,
+) => {
+  try {
+    if (!req.user) {
+      return res
+        .status(401)
+        .send({ message: "User harus login untuk menggunakan fitur ini" });
+    }
+
+    const searchByName = req.query as FriendListQuery;
+    const result = await connectionService.friendList(
+      req.user.name,
+      searchByName ?? null,
+    );
+    res.status(200).send(result);
   } catch (err) {
     if (err instanceof Error) {
       return res.status(500).send({ error: err.message });

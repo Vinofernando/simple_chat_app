@@ -1,4 +1,8 @@
 import { pool } from "../config/db.js";
+import type {
+  FriendListQuery,
+  FriendRequestStatus,
+} from "../types/connection.js";
 
 export const addFriend = async (from: number, friendCode: string) => {
   try {
@@ -25,13 +29,9 @@ export const addFriend = async (from: number, friendCode: string) => {
     );
 
     const connectionData = existedData.rows[0];
+
     if (existedData.rows.length > 0 && connectionData.status === "pending") {
-      throw new Error("Sudah membuat permintaan, silahkan tunggu");
-    } else if (
-      connectionData.status === "rejected" ||
-      connectionData.status === "accepted"
-    ) {
-      throw new Error("Hubungan user sudah ditentukan");
+      throw new Error("Permintaan sudah dikirim, silahkan tunggu");
     }
 
     await pool.query(
@@ -54,44 +54,67 @@ export const addFriend = async (from: number, friendCode: string) => {
 export const handleFriendRequest = async (
   from: number,
   to: number,
-  status: string,
+  status: FriendRequestStatus,
 ) => {
   const client = await pool.connect();
   try {
-    const updateResult = await pool.query(
-      `UPDATE user_connection SET status = $1 WHERE from_id = $2 AND to_id = $3`,
-      [status, to, from],
+    await client.query("BEGIN");
+    const findId = await client.query(
+      `SELECT user_connection_id FROM user_connection WHERE from_id = $1 AND to_id = $2`,
+      [from, to],
     );
 
-    console.log(updateResult);
-    if (updateResult.rowCount === 0) {
-      throw new Error("Gagal mengupdate permintaan");
+    if (findId.rows.length > 0 && status === "accept") {
+      throw new Error("Permintaan sudah ada");
     }
 
-    const existedConnection = await pool.query(
-      `SELECT user_connection_id WHERE from_id = $1 AND status = $2 OR $3`,
-      [to, "accepted", "rejected"],
-    );
-
-    if (status === "accepted" && updateResult.rowCount !== 0) {
-      await client.query("BEGIN");
-      await client.query(
-        "UPDATE user_connection set status = $1 WHERE from_id = $2 AND to_id = $3",
-        [status, to, from],
-      );
-
-      await client.query(
-        "INSERT INTO user_connection(from_id, to_id, status) VALUES($1, $2, $3)",
-        [from, to, status],
-      );
-
-      await client.query("COMMIT");
-    } else if (status === "rejected" && updateResult.rowCount !== 0) {
-      await client.query(
-        "UPDATE user_connection set status = $1 WHERE from_id = $2 AND to_id = $3",
-        [status, from, to],
-      );
+    if (findId.rows.length === 0 && status === "accept") {
+      throw new Error("Permintaan ditolak: Membuat permintaan ke akun sendiri");
     }
+
+    if (from === to) {
+      throw new Error("Permintaan ditolak: Membuat permintaan ke akun sendiri");
+    }
+
+    switch (status) {
+      case "accept":
+        await client.query(
+          "UPDATE user_connection set status = $1 WHERE from_id = $2 AND to_id = $3",
+          ["friend", to, from],
+        );
+
+        await client.query(
+          "INSERT INTO user_connection(from_id, to_id, status) VALUES($1, $2, $3)",
+          [from, to, "friend"],
+        );
+        break;
+
+      case "cancel":
+        await client.query(
+          "DELETE FROM user_connection WHERE from_id = $1 AND to_id = $2",
+          [from, to],
+        );
+        break;
+      case "delete":
+        await client.query(
+          `DELETE FROM user_connection WHERE (from_id = $1 AND to_id = $2) OR (from_id = $2 AND to_id = $1)`,
+          [from, to],
+        );
+        break;
+      case "block":
+        await client.query(
+          `UPDATE user_connection SET status = $1 WHERE from_id = $2 AND to_id = $3`,
+          ["block", from, to],
+        );
+        break;
+      case "unblock":
+        await client.query(
+          `UPDATE user_connection SET status = $1 WHERE from_id = $2 AND to_id = $3`,
+          ["friend", from, to],
+        );
+        break;
+    }
+    await client.query("COMMIT");
 
     return {
       message: "Berhasil mengupdate permintaan",
@@ -104,5 +127,45 @@ export const handleFriendRequest = async (
     throw new Error("Unknown error");
   } finally {
     client.release();
+  }
+};
+
+export const friendList = async (
+  username: string,
+  searchByName: FriendListQuery,
+) => {
+  try {
+    let query =
+      "select u.username AS from_user, friend.username AS to_user,uc.status FROM user_connection uc LEFT JOIN users u on u.id = uc.from_id LEFT JOIN users friend on friend.id = uc.to_id";
+
+    const condition = [];
+    const values = [];
+
+    values.push(username, "friend");
+
+    query += ` WHERE u.username = $${values.length - 1} AND uc.status = $${values.length}`;
+
+    console.log(query);
+    console.log(values);
+
+    if (searchByName.searchByName) {
+      values.push(`%${searchByName.searchByName}%`);
+      condition.push(`friend.username ILIKE $${values.length}`);
+      query += " AND " + condition.join();
+    }
+
+    console.log(query);
+    console.log(values);
+    const result = await pool.query(query, values);
+    return {
+      message: "Berhasil mendapatkan friend list",
+      data: result.rows,
+    };
+  } catch (err) {
+    if (err instanceof Error) {
+      await pool.query("ROLLBACK");
+      throw err;
+    }
+    throw new Error("Unknown error");
   }
 };
