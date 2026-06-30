@@ -49,11 +49,12 @@ export default async function getRefreshToken(
     res.setCookie("access_token", newAccesToken, {
       path: "/",
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 15 * 60,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 60,
     });
 
+    console.log("New access token:", newAccesToken);
     return {
       message: "Token berhasil diperbarui",
     };
