@@ -4,9 +4,32 @@ import dotenv from "dotenv";
 import authRoutes from "./auth/auth_routes.js";
 import connectionRoute from "./connection/connection_route.js";
 import fastifyCookie from "@fastify/cookie";
+import cors from "@fastify/cors";
+import { connectMongo } from "./config/mongodb.js";
+import { registerWebSocket } from "./config/websocket.js";
+import { WebsocketService } from "./websocket/websocket_service.js";
+import type { PrivateMessage } from "./websocket/websocket_service.js";
+import { registerWebSocketGateway } from "./websocket/websocket.gateway.js";
 dotenv.config();
 
 const app = Fastify({ logger: true });
+const db = await connectMongo();
+
+await registerWebSocket(app);
+
+await app.register(cors, {
+  // Allow single domain, multiple domains, or regex
+  origin: ["http://localhost:5173"],
+
+  // Explicitly allow specific HTTP methods
+  methods: ["GET", "POST", "PUT", "DELETE"],
+
+  // Allow specific custom headers from the frontend
+  allowedHeaders: ["Content-Type", "Authorization"],
+
+  // Set to true if your client sends cookies or authorization headers
+  credentials: true,
+});
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
@@ -35,13 +58,14 @@ await app.register(fastifyJwt, {
 await app.register(fastifyCookie, {
   secret: COOKIE_SECRET, // Berikan secret untuk menandai (sign) cookie agar tidak bisa dimanipulasi
 });
-// console.log(app.jwt);
-// console.log(app.refresh);
+
+const privateMessageCollection =
+  db.collection<PrivateMessage>("private_message");
+const webSocketService = new WebsocketService(privateMessageCollection);
+
+registerWebSocketGateway(app, webSocketService);
 app.register(authRoutes, { prefix: "/auth" });
 app.register(connectionRoute, { prefix: "/connection" });
-
-console.log("JWT_SECRET:", JWT_SECRET);
-console.log("REFRESH_SECRET:", REFRESH_TOKEN_SECRET);
 
 try {
   app.listen({ port: 3000, host: "127.0.0.1" });
