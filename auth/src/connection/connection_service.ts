@@ -136,7 +136,7 @@ export const friendList = async (
 ) => {
   try {
     let query =
-      "select u.username AS from_user, friend.username AS to_user,uc.status FROM user_connection uc LEFT JOIN users u on u.id = uc.from_id LEFT JOIN users friend on friend.id = uc.to_id";
+      "select u.username AS from_user, friend.username AS to_user, friend.friend_code, uc.status FROM user_connection uc LEFT JOIN users u on u.id = uc.from_id LEFT JOIN users friend on friend.id = uc.to_id";
 
     const condition = [];
     const values = [];
@@ -145,17 +145,12 @@ export const friendList = async (
 
     query += ` WHERE u.username = $${values.length - 1} AND uc.status = $${values.length}`;
 
-    console.log(query);
-    console.log(values);
-
     if (searchByName.searchByName) {
       values.push(`%${searchByName.searchByName}%`);
       condition.push(`friend.username ILIKE $${values.length}`);
       query += " AND " + condition.join();
     }
 
-    console.log(query);
-    console.log(values);
     const result = await pool.query(query, values);
     return {
       message: "Berhasil mendapatkan friend list",
