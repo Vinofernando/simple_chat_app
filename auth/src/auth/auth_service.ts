@@ -134,16 +134,16 @@ export const login = async (
     reply.setCookie("access_token", token, {
       path: "/",
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 15 * 60,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 60,
     });
 
     reply.setCookie("refresh_token", refreshToken, {
       path: "/",
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: false,
+      sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60,
     });
 
