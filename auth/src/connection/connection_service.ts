@@ -68,7 +68,7 @@ export const handleFriendRequest = async (
       throw new Error("Permintaan sudah ada");
     }
 
-    if (findId.rows.length === 0 && status === "accept") {
+    if (findId.rows.length > 0 && status === "accept") {
       throw new Error("Permintaan ditolak: Membuat permintaan ke akun sendiri");
     }
 
