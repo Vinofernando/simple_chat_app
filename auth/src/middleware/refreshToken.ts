@@ -51,7 +51,7 @@ export default async function getRefreshToken(
       httpOnly: true,
       secure: false,
       sameSite: "lax",
-      maxAge: 60,
+      maxAge: 15 * 60,
     });
 
     console.log("New access token:", newAccesToken);
