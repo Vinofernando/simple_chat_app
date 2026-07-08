@@ -5,11 +5,18 @@ interface UserTokenPayload {
   id: string;
   email: string;
   name: string;
+  friendCode: string;
 }
 
 interface IncomingData {
-  action: "register" | "kirim_chat" | "sedang_ketik" | "berhenti_mengetik";
+  action:
+    | "register"
+    | "kirim_chat"
+    | "sedang_ketik"
+    | "berhenti_mengetik"
+    | "riwayat_chat";
   payload: {
+    toCode: string;
     from: string;
     to: string;
     text: string;
@@ -25,37 +32,50 @@ export function registerWebSocketGateway(
       const ip = req.ip;
       fastify.log.info(`User terhubung via websocket ${ip}`);
 
-      try {
-        const { token, to } = req.query as { token?: string; to?: string };
+      const token = req.cookies.access_token;
 
+      try {
         const decoded = (await fastifyInstance.jwt.verify(
           token || "",
         )) as UserTokenPayload;
 
         const username = decoded.name;
+        const friendCode = decoded.friendCode;
 
-        if (to) {
-          const riwayatPesan = await service.getChatHistory(username, to);
-          socket.send(
-            JSON.stringify({
-              action: "riwayat_chat",
-              payload: riwayatPesan,
-            }),
-          );
-        }
+        service.registerUser(friendCode, socket);
 
-        service.registerUser(username, socket);
-
+        console.log("Decoded token:", decoded);
         socket.on("message", async (rawData) => {
           try {
             const data: IncomingData = JSON.parse(rawData.toString());
-
             switch (data.action) {
+              case "riwayat_chat":
+                const targetFriendCode =
+                  data.payload.toCode || (req.query as any).to;
+                if (targetFriendCode) {
+                  const riwayatPesan = await service.getChatHistory(
+                    friendCode,
+                    targetFriendCode,
+                  );
+                  console.log(targetFriendCode);
+                  socket.send(
+                    JSON.stringify({
+                      action: "riwayat_chat",
+                      payload: {
+                        friendCode: targetFriendCode,
+                        messages: riwayatPesan,
+                      },
+                    }),
+                  );
+                }
+                break;
               case "register":
                 service.registerUser(username, socket);
                 break;
               case "kirim_chat":
                 service.sendPrivateMessage(
+                  friendCode,
+                  data.payload.toCode,
                   username,
                   data.payload.to,
                   data.payload.text,
@@ -66,10 +86,10 @@ export function registerWebSocketGateway(
               case "berhenti_mengetik":
                 service.sendTypingStatus(
                   data.action,
-                  username,
+                  friendCode,
                   data.payload.to,
                 );
-
+                break;
               default:
                 fastify.log.warn("Action tidak dikenali oleh fastify server");
             }
@@ -90,6 +110,7 @@ export function registerWebSocketGateway(
         fastify.log.error(
           "Autentikasi gagal atau error pada inisialisasi koneksi",
         );
+        console.error("ALASAN WEBSOCKET DITUTUP:", err);
         socket.close(4001, "Unauthorized or Initialization Failed");
       }
     });
