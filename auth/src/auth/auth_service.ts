@@ -136,7 +136,7 @@ export const login = async (
       httpOnly: true,
       secure: false,
       sameSite: "lax",
-      maxAge: 60,
+      maxAge: 15 * 60,
     });
 
     reply.setCookie("refresh_token", refreshToken, {
