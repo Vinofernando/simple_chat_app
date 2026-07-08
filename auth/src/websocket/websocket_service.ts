@@ -2,6 +2,8 @@ import WebSocket from "ws";
 import { Collection } from "mongodb";
 
 export interface PrivateMessage {
+  fromCode: string;
+  toCode: string;
   from: string;
   to: string;
   text: string;
@@ -17,49 +19,68 @@ export class WebsocketService {
     this.activeUsers = new Map();
   }
 
-  registerUser(username: string, socket: WebSocket) {
-    this.activeUsers.set(username, socket);
-    console.log(`[INFO] ${username} otomatis terdaftar lewat verifikasi.`);
+  registerUser(frienCode: string, socket: WebSocket) {
+    this.activeUsers.set(frienCode, socket);
+    console.log(`[INFO] ${frienCode} otomatis terdaftar lewat verifikasi.`);
   }
 
   removeUserBySocket(socket: WebSocket): string | null {
-    for (let [username, savedSocket] of this.activeUsers.entries()) {
+    for (let [frienCode, savedSocket] of this.activeUsers.entries()) {
       if (savedSocket === socket) {
         console.log(socket);
         console.log(savedSocket);
-        this.activeUsers.delete(username);
-        return username;
+        this.activeUsers.delete(frienCode);
+        return frienCode;
       }
     }
     return null;
   }
 
-  async getChatHistory(username: string, to: string) {
+  async getChatHistory(currentUserCode: string, targetFriendCode: string) {
     return await this.messageCollection
       .find({
         $or: [
-          { from: username, to: to },
-          { from: to, to: username },
+          { fromCode: currentUserCode, toCode: targetFriendCode },
+          { fromCode: targetFriendCode, toCode: currentUserCode },
         ],
       })
       .sort({ createdAt: 1 })
       .toArray();
   }
 
-  async sendPrivateMessage(from: string, to: string, text: string) {
-    await this.messageCollection.insertOne({
+  async sendPrivateMessage(
+    fromCode: string,
+    toCode: string,
+    from: string,
+    to: string,
+    text: string,
+  ) {
+    // await this.messageCollection.insertOne({
+    //   fromCode,
+    //   toCode,
+    //   from,
+    //   to,
+    //   text,
+    //   createdAt: new Date(),
+    // });
+
+    const newMessage = {
+      fromCode,
+      toCode,
       from,
       to,
       text,
       createdAt: new Date(),
-    });
+    };
 
-    const recipientSocket = this.activeUsers.get(to);
+    await this.messageCollection.insertOne(newMessage);
+
+    const recipientSocket = this.activeUsers.get(toCode);
     if (recipientSocket && recipientSocket?.readyState === 1) {
       recipientSocket.send(
         JSON.stringify({
           action: "terima_chat_private",
-          payload: { from, text },
+          payload: newMessage,
         }),
       );
     }
@@ -67,7 +88,7 @@ export class WebsocketService {
 
   sendTypingStatus(
     action: "sedang_ketik" | "berhenti_mengetik",
-    from: string,
+    fromCode: string,
     to: string,
   ) {
     const recipientSocket = this.activeUsers.get(to);
@@ -75,9 +96,16 @@ export class WebsocketService {
       recipientSocket.send(
         JSON.stringify({
           action,
-          payload: { name: from },
+          payload: { fromCode },
         }),
       );
     }
   }
+
+  // sendOnlineStatus(
+  //   action: "online" | "offline",
+  //   fromCode: string
+  // ) {
+  //   const
+  // }
 }
