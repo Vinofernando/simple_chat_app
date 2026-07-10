@@ -3,6 +3,7 @@ import {
   addFriendControl,
   handleRequestController,
   friendListControl,
+  getHandleRequestControl,
 } from "./connection_controller.js";
 import verifyAuth from "../middleware/authMiddleware.js";
 
@@ -14,4 +15,9 @@ export default function connectionRoute(app: FastifyInstance) {
     handleRequestController,
   );
   app.get("/friend-list", { preHandler: [verifyAuth] }, friendListControl);
+  app.get(
+    "/get-friend-request",
+    { preHandler: verifyAuth },
+    getHandleRequestControl,
+  );
 }

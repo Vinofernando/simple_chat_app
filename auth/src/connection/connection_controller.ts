@@ -13,19 +13,17 @@ export const addFriendControl = async (
     const { friendCode } = req.body as { friendCode: string };
 
     // Ambil dari context alternatif yang kita buat
-    const user = (req as any).user;
 
-    console.log(user);
-    if (!user) {
+    if (!req.user) {
       return res
         .status(401)
         .send({ message: "User harus login untuk menggunakan fitur ini" });
     }
 
-    console.log("User terdeteksi:", user);
-
+    console.log(req.user.id);
+    console.log(friendCode);
     // Gunakan user.id yang sudah pasti aman dari hulu middleware
-    const result = await connectionService.addFriend(user.id, friendCode);
+    const result = await connectionService.addFriend(req.user.id, friendCode);
     res.status(201).send(result);
   } catch (err) {
     if (err instanceof Error) {
@@ -46,15 +44,17 @@ export const handleRequestController = async (
         .send({ message: "User harus login untuk menggunakan fitur ini" });
     }
 
-    const { toId, status } = req.body as {
-      toId: number;
+    const { fromId, toCode, status } = req.body as {
+      fromId: number;
+      toCode: string;
       status: FriendRequestStatus;
     };
 
-    console.log(toId, status);
+    console.log(fromId);
     const result = await connectionService.handleFriendRequest(
+      fromId,
+      toCode,
       req.user.id,
-      toId,
       status,
     );
 
@@ -84,6 +84,28 @@ export const friendListControl = async (
       req.user.name,
       searchByName ?? null,
     );
+    res.status(200).send(result);
+  } catch (err) {
+    if (err instanceof Error) {
+      return res.status(500).send({ error: err.message });
+    }
+    res.status(500).send({ error: "Unknown error" });
+  }
+};
+
+export const getHandleRequestControl = async (
+  req: FastifyRequest,
+  res: FastifyReply,
+) => {
+  try {
+    if (!req.user) {
+      return res
+        .status(401)
+        .send({ message: "User harus login untuk menggunakan fitur ini" });
+    }
+
+    const result = await connectionService.getFrienRequest(req.user.id);
+
     res.status(200).send(result);
   } catch (err) {
     if (err instanceof Error) {
