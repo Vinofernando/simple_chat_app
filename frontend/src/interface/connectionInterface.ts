@@ -1,5 +1,5 @@
 export interface Friend {
-  to_user: string;
+  to_name: string;
   friend_code: string;
   status: string;
 }
