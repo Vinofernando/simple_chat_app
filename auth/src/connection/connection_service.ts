@@ -148,7 +148,7 @@ export const friendList = async (
 ) => {
   try {
     let query =
-      "select u.username AS from_user, friend.username AS to_user, friend.friend_code, uc.status FROM user_connection uc LEFT JOIN users u on u.id = uc.from_id LEFT JOIN users friend on friend.id = uc.to_code";
+      "select u.username AS from_user, friend.username AS to_name, friend.friend_code, uc.status FROM user_connection uc LEFT JOIN users u on u.id = uc.from_id LEFT JOIN users friend on friend.friend_code = uc.to_code";
 
     const condition = [];
     const values = [];
@@ -177,16 +177,55 @@ export const friendList = async (
   }
 };
 
-export const getFrienRequest = async (userId: number) => {
+export const getFriendRequest = async (userId: string) => {
   try {
     const getRequest = await pool.query(
-      `select u.username AS from_user, friend.username AS to_user, friend.friend_code, uc.status FROM user_connection uc LEFT JOIN users u on u.id = uc.from_id LEFT JOIN users friend on friend.id = uc.to_code WHERE to_code = $1 AND status = $2`,
+      `select u.username AS from_user, friend.username AS to_name, friend.friend_code, uc.status FROM user_connection uc LEFT JOIN users u on u.id = uc.from_id LEFT JOIN users friend on friend.friend_code = uc.to_code WHERE to_code = $1 AND status = $2`,
+      [userId, "pending"],
+    );
+
+    console.log(getRequest);
+    return {
+      message: "Berhasil mendapatkan permintaan teman",
+      data: getRequest.rows,
+    };
+  } catch (err) {
+    if (err instanceof Error) {
+      throw err;
+    }
+    throw new Error("Unknown error");
+  }
+};
+
+export const getSendedRequest = async (userId: number) => {
+  try {
+    const getRequest = await pool.query(
+      `select u.username AS from_user, friend.username AS to_name, friend.friend_code, uc.status FROM user_connection uc LEFT JOIN users u on u.id = uc.from_id LEFT JOIN users friend on friend.friend_code = uc.to_code WHERE from_id = $1 AND status = $2`,
       [userId, "pending"],
     );
 
     return {
-      message: "Berhasil mendapatkan permintaan teman",
+      message: "Berhasil mendapatkan list request user",
       data: getRequest.rows,
+    };
+  } catch (err) {
+    if (err instanceof Error) {
+      throw err;
+    }
+    throw new Error("Unknown error");
+  }
+};
+
+export const getFriendByCode = async (friendCode: string) => {
+  try {
+    const getFriendProfile = await pool.query(
+      `SELECT username, friend_code FROM users WHERE friend_code = $1`,
+      [friendCode],
+    );
+
+    return {
+      message: "Berhasil mendapatkan profile user",
+      data: getFriendProfile.rows,
     };
   } catch (err) {
     if (err instanceof Error) {

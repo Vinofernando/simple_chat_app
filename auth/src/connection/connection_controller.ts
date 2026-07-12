@@ -104,7 +104,57 @@ export const getHandleRequestControl = async (
         .send({ message: "User harus login untuk menggunakan fitur ini" });
     }
 
-    const result = await connectionService.getFrienRequest(req.user.id);
+    console.log(req.user.friendCode);
+    const result = await connectionService.getFriendRequest(
+      req.user.friendCode,
+    );
+
+    res.status(200).send(result);
+  } catch (err) {
+    if (err instanceof Error) {
+      return res.status(500).send({ error: err.message });
+    }
+    res.status(500).send({ error: "Unknown error" });
+  }
+};
+
+export const getSendedRequestControl = async (
+  req: FastifyRequest,
+  res: FastifyReply,
+) => {
+  try {
+    if (!req.user) {
+      return res
+        .status(401)
+        .send({ message: "User harus login untuk menggunakan fitur ini" });
+    }
+
+    const result = await connectionService.getSendedRequest(req.user.id);
+
+    res.status(200).send(result);
+  } catch (err) {
+    if (err instanceof Error) {
+      return res.status(500).send({ error: err.message });
+    }
+    res.status(500).send({ error: "Unknown error" });
+  }
+};
+
+export const getFriendByCodeControl = async (
+  req: FastifyRequest,
+  res: FastifyReply,
+) => {
+  try {
+    if (!req.user) {
+      return res
+        .status(401)
+        .send({ message: "User harus login untuk menggunakan fitur ini" });
+    }
+
+    const { friendCode } = req.query as { friendCode: string };
+
+    const decodedFriendCode = friendCode ? decodeURIComponent(friendCode) : "";
+    const result = await connectionService.getFriendByCode(decodedFriendCode);
 
     res.status(200).send(result);
   } catch (err) {
