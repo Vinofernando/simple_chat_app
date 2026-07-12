@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import api from "../utils/axiosIntsance";
 import axios from "axios";
 import type { Friend } from "../interface/connectionInterface";
+import AddFriendCard from "./AddFriendCard";
 import "../styles/chatDashboard.css";
 
 interface ChatMessage {
@@ -32,10 +33,12 @@ export default function ChatDashboard() {
   const ws = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const [isLoading, setIsLoading] = useState(false);
   const [friendTypingStatus, setFriendTypingStatus] = useState<
     "sedang_ketik" | ""
   >("");
+
+  const [handleFriendMenu, setHandleFriendMenu] = useState(false);
+  const [friendCode, setFriendCode] = useState("");
   // Menggunakan ref untuk menyimpan activeFriend agar bisa dibaca di dalam event listener WebSocket tanpa re-render socket
   const activeFriendRef = useRef<Friend | null>(null);
   const profileRef = useRef<Profile | null>(null);
@@ -64,28 +67,44 @@ export default function ChatDashboard() {
   }, []);
 
   async function getFriendList() {
-    setIsLoading(true);
     try {
       const response = await api.get(
         `/connection/friend-list${searchFriend ? `?searchByName=${searchFriend}` : ""}`,
       );
       setFriendList(response.data.data);
-      setIsLoading(false);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const errorMessage =
           error.response?.data?.message || "Terjadi kesalahan pada server";
         console.error("Pesan Eror yang Ditangkap FE:", errorMessage);
-        setIsLoading(false);
         alert(errorMessage);
       } else if (error instanceof Error) {
         console.error("Generic Error:", error.message);
-        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
     }
   }
+
+  const handleAddFriend = async (e: React.SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      const response = await api.post("/connection/add-friend", {
+        friendCode,
+      });
+      console.log(response);
+      alert("Berhasil membuat permintaan");
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.log(friendCode);
+        console.log("Struktur Error Lengkap dari Axios:", error.response);
+        const errorMessage =
+          error.response?.data?.message || "Terjadi kesalahan pada server";
+        alert(error.response?.data.error);
+        console.error("Pesan Eror yang Ditangkap FE:", errorMessage);
+      } else if (error instanceof Error) {
+        console.error("Generic Error:", error.message);
+      }
+    }
+  };
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
@@ -99,7 +118,7 @@ export default function ChatDashboard() {
   // Lifecycle untuk inisialisasi WebSocket dan Friend List
   useEffect(() => {
     const connectWebSocket = () => {
-      const socket = new WebSocket(`ws://localhost:3000/chat`);
+      const socket = new WebSocket(`ws://192.168.1.14:3000/chat`);
       ws.current = socket;
 
       socket.onopen = () => {
@@ -258,7 +277,7 @@ export default function ChatDashboard() {
         action: "kirim_chat",
         payload: {
           toCode: activeFriend.friend_code,
-          to: activeFriend.to_user,
+          to: activeFriend.to_name,
           text: inputMessage,
         },
       };
@@ -271,7 +290,7 @@ export default function ChatDashboard() {
         fromCode: profile?.friendCode,
         toCode: activeFriend.friend_code || "",
         from: profile?.name,
-        to: activeFriend.to_user,
+        to: activeFriend.to_name,
         text: inputMessage,
       };
 
@@ -330,18 +349,25 @@ export default function ChatDashboard() {
     };
   }, [inputMessage, activeFriend]);
 
+  const toggleHandleFriendMenu = async () => {
+    setHandleFriendMenu((prev) => !prev);
+  };
   useEffect(() => {
     console.log("Chat history terbaru:", chatHistory);
     console.log("Panjang data terbaru:", chatHistory.length);
-  }, [chatHistory]);
+    console.log("FriendList:", friendList);
+  }, [chatHistory, friendList]);
   return (
     <div className="chat-dashboard flex h-screen w-full overflow-hidden bg-slate-950 text-slate-100 font-sans">
       {/* SIDEBAR: FRIEND LIST */}
       <div className="friend-list w-80 border-r border-slate-800 bg-slate-900 flex flex-col p-4 shrink-0">
-        <h1 className="text-xl font-bold tracking-tight mb-4 text-sky-400 truncate">
-          {profile?.email}
-        </h1>
-
+        <div className="flex items-center justify-between mb-4 bg-white/10 backdrop-blur-sm p-3 rounded-xl">
+          <h1 className=" font-bold tracking-tight text-sky-400 truncate mr-3">
+            {profile?.name}
+            {/* {profile?.email} */}
+          </h1>
+          <p className="text-white-700">{profile?.friendCode}</p>
+        </div>
         <div className="relative flex items-center mb-4">
           <input
             ref={searchInputRef}
@@ -363,7 +389,11 @@ export default function ChatDashboard() {
             </button>
           )}
         </div>
-
+        <div>
+          <button className="handle-friend" onClick={toggleHandleFriendMenu}>
+            Friend
+          </button>
+        </div>
         <ul className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
           {friendList.map((friend) => {
             const isActive = activeFriend?.friend_code === friend.friend_code;
@@ -378,7 +408,7 @@ export default function ChatDashboard() {
                   : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
               }`}
               >
-                <span className="truncate">{friend.to_user}</span>
+                <span className="truncate">{friend.to_name}</span>
                 <span
                   className={`text-xs px-2 py-0.5 rounded-md ${isActive ? "bg-indigo-700 text-indigo-200" : "bg-slate-800 text-slate-500"}`}
                 >
@@ -390,6 +420,14 @@ export default function ChatDashboard() {
         </ul>
       </div>
 
+      {handleFriendMenu && (
+        <AddFriendCard
+          handleAddFriend={handleAddFriend}
+          toggleHandleFriendMenu={toggleHandleFriendMenu}
+          setFriendCode={setFriendCode}
+          friendCode={friendCode}
+        />
+      )}
       {/* MAIN AREA: CHAT SCREEN */}
       <div className="chat-area flex-1 flex flex-col bg-slate-950">
         {activeFriend ? (
@@ -398,7 +436,7 @@ export default function ChatDashboard() {
             <div className="p-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
               <h3 className="text-base font-semibold text-slate-200">
                 Chat dengan{" "}
-                <span className="text-indigo-400">{activeFriend.to_user}</span>
+                <span className="text-indigo-400">{activeFriend.to_name}</span>
               </h3>
             </div>
 
@@ -448,7 +486,7 @@ export default function ChatDashboard() {
               {friendTypingStatus === "sedang_ketik" && (
                 <div className="typing-indicator text-xs italic text-indigo-400 mb-2 animate-pulse flex items-center gap-1 pl-1">
                   <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></span>
-                  {activeFriend?.to_user} sedang mengetik...
+                  {activeFriend?.to_name} sedang mengetik...
                 </div>
               )}
 
