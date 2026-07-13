@@ -25,7 +25,7 @@ export default function Login() {
         console.log("Struktur Error Lengkap dari Axios:", error.response);
         const errorMessage =
           error.response?.data?.message || "Terjadi kesalahan pada server";
-
+        alert(error.message);
         console.error("Pesan Eror yang Ditangkap FE:", errorMessage);
         setLoginFailed(errorMessage);
       } else if (error instanceof Error) {
@@ -97,7 +97,7 @@ export default function Login() {
           <div>
             <button
               type="submit"
-              className="group relative flex w-full justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all active:scale-[0.98]"
+              className="group relative flex w-full justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all active:scale-[0.98]"
             >
               Sign In
             </button>

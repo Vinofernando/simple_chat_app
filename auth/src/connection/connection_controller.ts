@@ -20,10 +20,12 @@ export const addFriendControl = async (
         .send({ message: "User harus login untuk menggunakan fitur ini" });
     }
 
-    console.log(req.user.id);
-    console.log(friendCode);
     // Gunakan user.id yang sudah pasti aman dari hulu middleware
-    const result = await connectionService.addFriend(req.user.id, friendCode);
+    const result = await connectionService.addFriend(
+      req.user.id,
+      friendCode,
+      req.user.friendCode,
+    );
     res.status(201).send(result);
   } catch (err) {
     if (err instanceof Error) {

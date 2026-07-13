@@ -4,7 +4,11 @@ import type {
   FriendRequestStatus,
 } from "../types/connection.js";
 
-export const addFriend = async (from: number, friendCode: string) => {
+export const addFriend = async (
+  from: number,
+  friendCode: string,
+  userCode: string,
+) => {
   try {
     if (!from) {
       throw new Error("User belum login");
@@ -17,6 +21,31 @@ export const addFriend = async (from: number, friendCode: string) => {
       [friendCode],
     );
 
+    const findId = await pool.query(
+      `SELECT id FROM users WHERE friend_code = $1`,
+      [friendCode],
+    );
+
+    const findIdFromCode = await pool.query(
+      `SELECT to_code FROM user_connection WHERE from_id = $1 AND to_code = $2`,
+      [findId.rows[0].id, userCode],
+    );
+
+    if (findIdFromCode.rows.length > 0) {
+      const updateConnection = await pool.query(
+        `UPDATE user_connection SET status = $1 WHERE from_id = $2 AND to_code = $3`,
+        ["friend", findId.rows[0].id, userCode],
+      );
+      const insertConnection = await pool.query(
+        `INSERT INTO user_connection(from_id, to_code, status) VALUES($1,$2,$3) `,
+        [from, friendCode, "friend"],
+      );
+
+      return {
+        message:
+          "Berhasil membuat permintaan teman, user lain sudah mengirim permintaan yang sama",
+      };
+    }
     const findSelfCode = await pool.query(
       `SELECT friend_code FROM users WHERE id = $1`,
       [from],
@@ -43,8 +72,8 @@ export const addFriend = async (from: number, friendCode: string) => {
     }
 
     await pool.query(
-      `INSERT INTO user_connection(from_id, to_code) values($1, $2)`,
-      [from, friendCode],
+      `INSERT INTO user_connection(from_id, to_code, from_code) values($1, $2, $3)`,
+      [from, friendCode, userCode],
     );
 
     return {
@@ -180,7 +209,7 @@ export const friendList = async (
 export const getFriendRequest = async (userId: string) => {
   try {
     const getRequest = await pool.query(
-      `select u.username AS from_user, friend.username AS to_name, friend.friend_code, uc.status FROM user_connection uc LEFT JOIN users u on u.id = uc.from_id LEFT JOIN users friend on friend.friend_code = uc.to_code WHERE to_code = $1 AND status = $2`,
+      `select u.username AS from_user, friend.username AS to_name, friend.friend_code, uc.status, u.friend_code AS from_code FROM user_connection uc LEFT JOIN users u on u.id = uc.from_id LEFT JOIN users friend on friend.friend_code = uc.to_code WHERE to_code = $1 AND status = $2`,
       [userId, "pending"],
     );
 
