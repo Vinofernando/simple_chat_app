@@ -4,6 +4,7 @@ import axios from "axios";
 import type { Friend } from "../interface/connectionInterface";
 import AddFriendCard from "./AddFriendCard";
 import "../styles/chatDashboard.css";
+import { useNavigate } from "react-router-dom";
 
 interface ChatMessage {
   fromCode?: string;
@@ -46,6 +47,7 @@ export default function ChatDashboard() {
 
   const reconnectTimeoutRef = useRef<number | null>(null);
 
+  const navigate = useNavigate();
   useEffect(() => {
     activeFriendRef.current = activeFriend;
   }, [activeFriend]);
@@ -357,6 +359,11 @@ export default function ChatDashboard() {
     console.log("Panjang data terbaru:", chatHistory.length);
     console.log("FriendList:", friendList);
   }, [chatHistory, friendList]);
+
+  const handleLogout = async () => {
+    navigate("/login");
+    return;
+  };
   return (
     <div className="chat-dashboard flex h-screen w-full overflow-hidden bg-slate-950 text-slate-100 font-sans">
       {/* SIDEBAR: FRIEND LIST */}
@@ -364,9 +371,14 @@ export default function ChatDashboard() {
         <div className="flex items-center justify-between mb-4 bg-white/10 backdrop-blur-sm p-3 rounded-xl">
           <h1 className=" font-bold tracking-tight text-sky-400 truncate mr-3">
             {profile?.name}
-            {/* {profile?.email} */}
+            <span className="text-gray-400">{profile?.friendCode}</span>
           </h1>
-          <p className="text-white-700">{profile?.friendCode}</p>
+          <button
+            className="bg-red-700 px-3 py-2 rounded-2xl transition-colors delay-10 duration-300 ease-in-out hover:bg-red-900"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
         </div>
         <div className="relative flex items-center mb-4">
           <input
