@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import api from "../utils/axiosIntsance";
-import { div } from "framer-motion/client";
+import { div, h1 } from "framer-motion/client";
 import defaultProfile from "../assets/default-profile.jpg";
 
 export default function AddFriendCard({
@@ -15,6 +15,7 @@ export default function AddFriendCard({
   const [activeTab, setActiveTab] = useState("add");
   const [sendedRequest, setSendedRequest] = useState([]);
   const [getStrangerProfile, setGetStrangerProfile] = useState([]);
+  const [friendRequest, setFriendRequest] = useState([]);
 
   const tabs = [
     { id: "add", label: "Add Friend" },
@@ -69,6 +70,35 @@ export default function AddFriendCard({
     };
   }, [friendCode]);
 
+  useEffect(() => {
+    async function fetchFriendRequest() {
+      try {
+        const response = await api.get("/connection/get-friend-request");
+        console.log("friend request: ", response);
+        setFriendRequest(response.data.data);
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          const errorMessage =
+            error.response?.data?.message || "Terjadi kesalahan pada server";
+          console.error("Pesan Eror yang Ditangkap FE:", errorMessage);
+          alert(errorMessage);
+        } else if (error instanceof Error) {
+          console.error("Generic Error:", error.message);
+        }
+      }
+    }
+    fetchFriendRequest();
+  }, []);
+
+  // const handleRequest = async (option: string) => {
+  //   try{
+  //     const response = await api.post("/connection/friend-request", {
+
+  //     })
+  //   } catch (error){
+
+  //   }
+  // }
   return (
     // Animasi munculnya backdrop saat modal terbuka
     <motion.div
@@ -165,19 +195,41 @@ export default function AddFriendCard({
                 ))}
             </div>
           )}
-          {activeTab === "request" && <div></div>}
+          {activeTab === "request" && (
+            <div>
+              {friendRequest.length > 0 &&
+                friendRequest.map((friend) => (
+                  <div className="flex justify-between bg-slate-700 px-2 py-1 rounded-2xl">
+                    {" "}
+                    <h1 className="text-slate-50">
+                      {friend.from_user} | <span>{friend.from_code}</span>
+                    </h1>
+                    <div className="gap-2 flex">
+                      <button>❌</button>
+                      <button>✅</button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
           {activeTab === "sent" && (
             <div>
               <div>
                 {sendedRequest.map((friend) => (
                   <div
                     key={new Date()}
-                    className="flex gap-1 justify-between bg-indigo-800 p-2 rounded-2xl transition delay-10 duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"
+                    className="flex gap-1 justify-between bg-slate-700 p-2 rounded-2xl transition delay-10 duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"
                   >
-                    <p className="text-slate-50">{friend.to_name}</p>
-                    <button className="transition delay-150 duration-30 ease-in-out  hover:text-slate-50">
-                      X
-                    </button>
+                    <p className="text-slate-50">
+                      {friend.to_name} |
+                      <span className="text-gray-400">
+                        {friend.friend_code}
+                      </span>
+                    </p>
+                    <div className="flex g-2">
+                      <button>❌</button>
+                      <button>✅</button>
+                    </div>
                   </div>
                 ))}
               </div>
