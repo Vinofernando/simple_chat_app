@@ -21,24 +21,24 @@ export const addFriend = async (
       [friendCode],
     );
 
-    const findId = await pool.query(
-      `SELECT id FROM users WHERE friend_code = $1`,
-      [friendCode],
-    );
+    // const findUser = await pool.query(
+    //   `SELECT id FROM users WHERE friend_code = $1`,
+    //   [friendCode],
+    // );
 
-    const findIdFromCode = await pool.query(
+    const findUserFromCode = await pool.query(
       `SELECT to_code FROM user_connection WHERE from_id = $1 AND to_code = $2`,
-      [findId.rows[0].id, userCode],
+      [findUser.rows[0].id, userCode],
     );
 
-    if (findIdFromCode.rows.length > 0) {
+    if (findUserFromCode.rows.length > 0) {
       const updateConnection = await pool.query(
         `UPDATE user_connection SET status = $1 WHERE from_id = $2 AND to_code = $3`,
-        ["friend", findId.rows[0].id, userCode],
+        ["friend", findUser.rows[0].id, userCode],
       );
       const insertConnection = await pool.query(
-        `INSERT INTO user_connection(from_id, to_code, status) VALUES($1,$2,$3) `,
-        [from, friendCode, "friend"],
+        `INSERT INTO user_connection(from_id, to_code, status, from_code) VALUES($1,$2,$3, $4) `,
+        [from, friendCode, "friend", userCode],
       );
 
       return {
@@ -90,68 +90,69 @@ export const addFriend = async (
 
 export const handleFriendRequest = async (
   fromId: number,
-  to: string,
-  toId: number,
+  toCode: string,
+  fromCode: string,
   status: FriendRequestStatus,
 ) => {
   const client = await pool.connect();
   const getFromCode = await pool.query(
-    `SELECT friend_code FROM users WHERE id = $1`,
-    [fromId],
+    `SELECT friend_code FROM users WHERE friend_code = $1`,
+    [fromCode],
   );
 
-  console.log(getFromCode);
   if (getFromCode.rows.length === 0) {
     throw new Error("User tidak ditemukan");
   }
 
-  const fromCode = getFromCode.rows[0].friend_code;
   try {
     await client.query("BEGIN");
-    const findId = await client.query(
-      `SELECT user_connection_id, status FROM user_connection WHERE from_id = $1 AND to_code = $2`,
-      [fromId, to],
+    const findUser = await client.query(
+      `SELECT user_connection_id, status FROM user_connection WHERE from_code = $1 AND to_code = $2`,
+      [fromCode, toCode],
     );
 
-    if (findId.rows.length > 0 && findId.rows[0].status === "accept") {
-      throw new Error("Permintaan sudah ada");
+    if (findUser.rows.length > 0 && findUser.rows[0].status === "accept") {
+      throw new Error("Sudah berteman");
     }
 
     switch (status) {
       case "accept":
         await client.query(
-          "UPDATE user_connection set status = $1 WHERE from_id = $2 AND to_code = $3",
-          ["friend", fromId, to],
+          "UPDATE user_connection set status = $1 WHERE from_code = $2 AND to_code = $3",
+          ["friend", fromCode, toCode],
         );
 
         await client.query(
-          "INSERT INTO user_connection(from_id, to_code, status) VALUES($1, $2, $3)",
-          [toId, fromCode, "friend"],
+          "INSERT INTO user_connection(from_id, to_code, status, from_code) VALUES($1, $2, $3, $4)",
+          [fromId, fromCode, "friend", toCode],
         );
         break;
 
       case "cancel":
         await client.query(
           "DELETE FROM user_connection WHERE from_id = $1 AND to_code = $2",
-          [fromId, to],
+          [fromId, fromCode],
         );
         break;
+      // need rebuilt
       case "delete":
         await client.query(
           `DELETE FROM user_connection WHERE (from_id = $1 AND to_code = $2) OR (from_id = $2 AND to_code = $1)`,
-          [fromId, to],
+          [fromId, toCode],
         );
         break;
+      // need rebuilt
       case "block":
         await client.query(
           `UPDATE user_connection SET status = $1 WHERE from_id = $2 AND to_code = $3`,
-          ["block", fromId, to],
+          ["block", fromId, toCode],
         );
         break;
+      // need rebuilt
       case "unblock":
         await client.query(
           `UPDATE user_connection SET status = $1 WHERE from_id = $2 AND to_code = $3`,
-          ["friend", fromId, to],
+          ["friend", fromId, toCode],
         );
         break;
     }

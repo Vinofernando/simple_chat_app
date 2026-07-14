@@ -46,17 +46,15 @@ export const handleRequestController = async (
         .send({ message: "User harus login untuk menggunakan fitur ini" });
     }
 
-    const { fromId, toCode, status } = req.body as {
-      fromId: number;
+    const { toCode, status } = req.body as {
       toCode: string;
       status: FriendRequestStatus;
     };
 
-    console.log(fromId);
     const result = await connectionService.handleFriendRequest(
-      fromId,
-      toCode,
       req.user.id,
+      req.user.friendCode,
+      toCode,
       status,
     );
 
