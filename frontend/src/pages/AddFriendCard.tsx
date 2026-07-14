@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import api from "../utils/axiosIntsance";
-import { div, h1 } from "framer-motion/client";
 import defaultProfile from "../assets/default-profile.jpg";
 
 export default function AddFriendCard({
@@ -16,6 +15,7 @@ export default function AddFriendCard({
   const [sendedRequest, setSendedRequest] = useState([]);
   const [getStrangerProfile, setGetStrangerProfile] = useState([]);
   const [friendRequest, setFriendRequest] = useState([]);
+  const [getAddedUser, setGetAddedUser] = useState("");
 
   const tabs = [
     { id: "add", label: "Add Friend" },
@@ -90,15 +90,27 @@ export default function AddFriendCard({
     fetchFriendRequest();
   }, []);
 
-  // const handleRequest = async (option: string) => {
-  //   try{
-  //     const response = await api.post("/connection/friend-request", {
+  const handleRequest = async (status: any, toCode: any) => {
+    try {
+      const response = await api.post("/connection/friend-request", {
+        toCode,
+        status,
+      });
+      console.log(response);
+      alert("Berhasil membatalkan permintaan teman");
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorMessage =
+          error.response?.data?.message || "Terjadi kesalahan pada server";
+        console.error("Pesan Eror yang Ditangkap FE:", errorMessage);
+        alert(errorMessage);
+      } else if (error instanceof Error) {
+        console.error("Generic Error:", error.message);
+      }
+    }
+  };
 
-  //     })
-  //   } catch (error){
-
-  //   }
-  // }
+  console.log(getAddedUser);
   return (
     // Animasi munculnya backdrop saat modal terbuka
     <motion.div
@@ -217,8 +229,9 @@ export default function AddFriendCard({
               <div>
                 {sendedRequest.map((friend) => (
                   <div
-                    key={new Date()}
+                    key={friend.friend_code}
                     className="flex gap-1 justify-between bg-slate-700 p-2 rounded-2xl transition delay-10 duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"
+                    onClick={() => setGetAddedUser(friend.friend_code)}
                   >
                     <p className="text-slate-50">
                       {friend.to_name} |
@@ -227,7 +240,13 @@ export default function AddFriendCard({
                       </span>
                     </p>
                     <div className="flex g-2">
-                      <button>❌</button>
+                      <button
+                        onClick={() => {
+                          handleRequest("cancel", friend.friend_code);
+                        }}
+                      >
+                        ❌
+                      </button>
                       <button>✅</button>
                     </div>
                   </div>
