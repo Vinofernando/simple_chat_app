@@ -129,10 +129,11 @@ export const handleFriendRequest = async (
         break;
 
       case "cancel":
-        await client.query(
-          "DELETE FROM user_connection WHERE from_id = $1 AND to_code = $2",
-          [fromId, fromCode],
+        const result = await client.query(
+          "DELETE FROM user_connection WHERE (from_code = $1 AND to_code = $2) OR (from_code = $2 AND to_code = $1)",
+          [fromCode, toCode],
         );
+        console.log(result.rows);
         break;
       // need rebuilt
       case "delete":
