@@ -10,11 +10,25 @@ export default function AddFriendCard({
   setFriendCode,
   friendCode,
 }: any) {
+  interface Profile {
+    username: string;
+    friend_code: string;
+  }
+
+  interface SendRequest {
+    from_user: string;
+    from_code: string;
+  }
+
+  interface SendedRequest {
+    to_name: string;
+    friend_code: string;
+  }
   // State untuk melacak tab mana yang sedang aktif
   const [activeTab, setActiveTab] = useState("add");
-  const [sendedRequest, setSendedRequest] = useState([]);
-  const [getStrangerProfile, setGetStrangerProfile] = useState([]);
-  const [friendRequest, setFriendRequest] = useState([]);
+  const [sendedRequest, setSendedRequest] = useState<SendedRequest[]>([]);
+  const [getStrangerProfile, setGetStrangerProfile] = useState<Profile[]>([]);
+  const [friendRequest, setFriendRequest] = useState<SendRequest[]>([]);
   const [getAddedUser, setGetAddedUser] = useState("");
 
   const tabs = [
@@ -97,6 +111,7 @@ export default function AddFriendCard({
         status,
       });
       console.log(response);
+      console.log(toCode);
       alert("Berhasil membatalkan permintaan teman");
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -194,7 +209,7 @@ export default function AddFriendCard({
               {getStrangerProfile.length > 0 &&
                 getStrangerProfile.map((item) => (
                   <div
-                    key={Math.random() * 100000}
+                    key={item.friend_code}
                     className="flex flex-col justify-center items-center bg-indigo-800 h-full my-7.5 rounded-2xl"
                   >
                     <img
@@ -217,8 +232,20 @@ export default function AddFriendCard({
                       {friend.from_user} | <span>{friend.from_code}</span>
                     </h1>
                     <div className="gap-2 flex">
-                      <button>❌</button>
-                      <button>✅</button>
+                      <button
+                        onClick={() => {
+                          handleRequest("cancel", friend.from_code);
+                        }}
+                      >
+                        ❌
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleRequest("accept", friend.from_code);
+                        }}
+                      >
+                        ✅
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -247,7 +274,6 @@ export default function AddFriendCard({
                       >
                         ❌
                       </button>
-                      <button>✅</button>
                     </div>
                   </div>
                 ))}
