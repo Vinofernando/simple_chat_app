@@ -22,7 +22,19 @@ interface Profile {
 
 export default function ChatDashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [friendList, setFriendList] = useState<Friend[]>([]);
+  const [friendList, setFriendList] = useState<Friend[]>(() => {
+    const savedFriends = localStorage.getItem("friendList");
+    if (savedFriends) {
+      try {
+        return JSON.parse(savedFriends) as Friend[];
+      } catch (error) {
+        console.error("Failed to parse friendList from localStorage", error);
+        return []; // Balikkan array kosong jika JSON corrupt
+      }
+    }
+
+    return [];
+  });
   const [searchFriend, setSearchFriend] = useState<string>("");
 
   const [activeFriend, setActiveFriend] = useState<Friend | null>(null);
@@ -74,6 +86,7 @@ export default function ChatDashboard() {
         `/connection/friend-list${searchFriend ? `?searchByName=${searchFriend}` : ""}`,
       );
       setFriendList(response.data.data);
+      localStorage.setItem("friendList", JSON.stringify(response.data.data));
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const errorMessage =
@@ -438,6 +451,9 @@ export default function ChatDashboard() {
           toggleHandleFriendMenu={toggleHandleFriendMenu}
           setFriendCode={setFriendCode}
           friendCode={friendCode}
+          friendList={friendList}
+          setFriendList={setFriendList}
+          profile={profile}
         />
       )}
       {/* MAIN AREA: CHAT SCREEN */}
