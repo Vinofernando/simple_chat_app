@@ -1,0 +1,36 @@
+.chat-dashboard {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+}
+
+.friend-list {
+  width: 30%;
+  height: 100vh;
+}
+
+.chat-area {
+  width: 70%;
+  height: 100vh;
+  border: 1px solid black;
+}
+
+.friend-item {
+  padding: 10px;
+  border: 1px solid black;
+  margin: 5px;
+  cursor: pointer;
+  border-radius: 30px;
+  list-style-type: none;
+}
+
+.handle-friend {
+  background: gray;
+  border-radius: 20px;
+  padding: 10px 20px;
+  transition: all 0.2s ease-in;
+}
+
+.handle-friend:hover {
+  background-color: rgba(107, 6, 179, 0.959);
+}
