@@ -3,7 +3,7 @@ import api from "../utils/axiosIntsance";
 import axios from "axios";
 import type { Friend } from "../interface/connectionInterface";
 import AddFriendCard from "./AddFriendCard";
-import "../styles/chatDashboard.css";
+import "../styles/chat-dashboard.css";
 import { useNavigate } from "react-router-dom";
 import { usePopup } from "../context/PopupContext";
 
