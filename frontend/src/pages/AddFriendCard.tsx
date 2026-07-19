@@ -26,7 +26,6 @@ export default function AddFriendCard({
   handleAddFriend,
   setFriendCode,
   friendCode,
-  friendList,
   setFriendList,
   profile,
 }: any) {
@@ -122,7 +121,16 @@ export default function AddFriendCard({
         status,
       });
       if (status === "cancel") {
+        const newFriendReq = friendRequest.filter(
+          (item) => item.from_code !== toCode,
+        );
+        const newFriendSent = sendedRequest.filter(
+          (item) => item.friend_code !== toCode,
+        );
+        setFriendRequest(newFriendReq);
+        setSendedRequest(newFriendSent);
         showPopup("Berhasil membatalkan permintaan teman", true);
+        return;
       }
       if (status === "accept") {
         showPopup("Berhasil menerima permintaan teman", true);
@@ -132,11 +140,13 @@ export default function AddFriendCard({
           status: status,
           to_name: username,
         };
-        console.log(newFriend);
         setFriendList((prev: any) => [...prev, newFriend]);
+        const newFriendReq = friendRequest.filter(
+          (item) => item.from_code !== toCode,
+        );
+        setFriendRequest(newFriendReq);
         return newFriend;
       }
-      console.log("friendList: ", friendList);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const errorMessage =
@@ -149,7 +159,6 @@ export default function AddFriendCard({
     }
   };
 
-  console.log(getAddedUser);
   return (
     // Animasi munculnya backdrop saat modal terbuka
 
