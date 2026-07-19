@@ -5,6 +5,7 @@ import type { Friend } from "../interface/connectionInterface";
 import AddFriendCard from "./AddFriendCard";
 import "../styles/chatDashboard.css";
 import { useNavigate } from "react-router-dom";
+import { usePopup } from "../context/PopupContext";
 
 interface ChatMessage {
   fromCode?: string;
@@ -21,6 +22,7 @@ interface Profile {
 }
 
 export default function ChatDashboard() {
+  const { showPopup } = usePopup();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [friendList, setFriendList] = useState<Friend[]>(() => {
     const savedFriends = localStorage.getItem("friendList");
@@ -106,7 +108,7 @@ export default function ChatDashboard() {
         friendCode,
       });
       console.log(response);
-      alert("Berhasil membuat permintaan");
+      showPopup("Berhasil mengirim permintaan teman", true);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.log(friendCode);

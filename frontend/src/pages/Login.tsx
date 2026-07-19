@@ -2,30 +2,33 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import api from "../utils/axiosIntsance";
+import "../styles/popup-card.css";
+import { usePopup } from "..//context/PopupContext";
 
 export default function Login() {
+  const { showPopup } = usePopup();
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [loginFailed, setLoginFailed] = useState("");
   const navigate = useNavigate();
+
   const loginHandler = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const response = await api.post("/auth/login", {
+      await api.post("/auth/login", {
         email,
         password,
       });
 
-      console.log(response);
-      alert("login berhasil");
-
+      showPopup("Login berhasil", true);
       navigate("/");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.log("Struktur Error Lengkap dari Axios:", error.response);
         const errorMessage =
           error.response?.data?.message || "Terjadi kesalahan pada server";
-        alert(error.message);
+        // callPopup("Email atau password salah");
+        showPopup("Email atau password salah", false);
         console.error("Pesan Eror yang Ditangkap FE:", errorMessage);
         setLoginFailed(errorMessage);
       } else if (error instanceof Error) {
@@ -50,11 +53,6 @@ export default function Login() {
           <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
             Sign in to your account
           </h2>
-          {loginFailed.length > 0 && (
-            <p className="text-red-800 w-full flex justify-center">
-              {loginFailed}
-            </p>
-          )}
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={loginHandler}>

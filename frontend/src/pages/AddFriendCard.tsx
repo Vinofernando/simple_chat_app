@@ -1,8 +1,25 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import axios from "axios";
 import api from "../utils/axiosIntsance";
 import defaultProfile from "../assets/default-profile.jpg";
+import "../styles/popup-card.css";
+import { usePopup } from "../context/PopupContext";
+
+interface Profile {
+  username: string;
+  friend_code: string;
+}
+
+interface SendRequest {
+  from_user: string;
+  from_code: string;
+}
+
+interface SendedRequest {
+  to_name: string;
+  friend_code: string;
+}
 
 export default function AddFriendCard({
   toggleHandleFriendMenu,
@@ -13,21 +30,8 @@ export default function AddFriendCard({
   setFriendList,
   profile,
 }: any) {
-  interface Profile {
-    username: string;
-    friend_code: string;
-  }
-
-  interface SendRequest {
-    from_user: string;
-    from_code: string;
-  }
-
-  interface SendedRequest {
-    to_name: string;
-    friend_code: string;
-  }
   // State untuk melacak tab mana yang sedang aktif
+  const { showPopup } = usePopup();
   const [activeTab, setActiveTab] = useState("add");
   const [sendedRequest, setSendedRequest] = useState<SendedRequest[]>([]);
   const [getStrangerProfile, setGetStrangerProfile] = useState<Profile[]>([]);
@@ -113,17 +117,15 @@ export default function AddFriendCard({
     username: string | "",
   ) => {
     try {
-      const response = await api.post("/connection/friend-request", {
+      await api.post("/connection/friend-request", {
         toCode,
         status,
       });
-      console.log("response: ", response);
-      console.log(toCode);
       if (status === "cancel") {
-        alert("Berhasil membatalkan permintaan teman");
+        showPopup("Berhasil membatalkan permintaan teman", true);
       }
       if (status === "accept") {
-        alert("Berhasil menerima permintaan teman");
+        showPopup("Berhasil menerima permintaan teman", true);
         const newFriend = {
           friend_code: toCode,
           from_user: profile.name,
@@ -150,6 +152,7 @@ export default function AddFriendCard({
   console.log(getAddedUser);
   return (
     // Animasi munculnya backdrop saat modal terbuka
+
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -164,6 +167,7 @@ export default function AddFriendCard({
         className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl h-2/3"
       >
         {/* Header Card */}
+
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-slate-200 tracking-tight">
             Menu Pertemanan
@@ -176,7 +180,6 @@ export default function AddFriendCard({
           </button>
         </div>
 
-        {/* Tab Menu Navigasi dengan Animasi Sliding */}
         <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800/60 mb-4 relative">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
